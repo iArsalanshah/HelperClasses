@@ -142,3 +142,13 @@ public class Tracker implements LocationListener {
         return null;
     }
 }
+/*usage example
+tracker = new Tracker(this);
+        if (tracker.isCanGetLocation()) {
+            SharedPreferences sharedPreferences = getSharedPreferences(Constant_util.PREFS_NAME, 0);
+            sharedPreferences.edit().putString(Constant_util.USER_LAT, String.valueOf(tracker.getLat())).apply();
+            sharedPreferences.edit().putString(Constant_util.USER_LONG, String.valueOf(tracker.getLng())).apply();
+        } else {
+            tracker.settingGPS();
+        }
+*/
