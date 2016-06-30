@@ -1,5 +1,3 @@
-package com.example.mystashapp.mystashappproject.webservicefactory;
-
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
