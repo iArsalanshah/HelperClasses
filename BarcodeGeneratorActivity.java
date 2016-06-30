@@ -64,7 +64,7 @@ public class BarcodeGeneratorActivity {
 
 }
 
-/*example usage of this class
+/*example usage of this class 
 BarcodeGeneratorActivity barcodeGeneratorActivity = new BarcodeGeneratorActivity();
         try {
             bitmap = barcodeGeneratorActivity.encodeAsBitmap(barcode, SimpleScannerActivity.barcodeFormat, 600, 300);
