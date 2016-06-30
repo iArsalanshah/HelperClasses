@@ -1,29 +1,3 @@
-package com.example.mystashapp.mystashappproject.webservicefactory;
-
-import com.example.mystashapp.mystashappproject.pojo.add_rating_pojo.ADDRating;
-import com.example.mystashapp.mystashappproject.pojo.add_review_pojo.ADDReview;
-import com.example.mystashapp.mystashappproject.pojo.add_stash.AddStash;
-import com.example.mystashapp.mystashappproject.pojo.addloyalty_pojo.AddLoyalty;
-import com.example.mystashapp.mystashappproject.pojo.all_flyers_by_categ.GetAllFlyersWebService;
-import com.example.mystashapp.mystashappproject.pojo.categories_coupons_pojo.CategoriesCoupons;
-import com.example.mystashapp.mystashappproject.pojo.customer_check_in.CustomerCheckIn;
-import com.example.mystashapp.mystashappproject.pojo.delete_loyalty_card.DeleteLoyaltyCard;
-import com.example.mystashapp.mystashappproject.pojo.get_all_coupons_pojo.Get_All_Coupons;
-import com.example.mystashapp.mystashappproject.pojo.get_my_stash_list.GetMyStash;
-import com.example.mystashapp.mystashappproject.pojo.getcardslist_pojo.GetCardsList;
-import com.example.mystashapp.mystashappproject.pojo.getmycards_pojo.GetMycards;
-import com.example.mystashapp.mystashappproject.pojo.pojo_cite_points.CitePointsTransactions;
-import com.example.mystashapp.mystashappproject.pojo.pojo_login.LoginUser;
-import com.example.mystashapp.mystashappproject.pojo.pojo_register.RegisterUser;
-import com.example.mystashapp.mystashappproject.pojo.pojo_searchbusiness.SearchBusiness;
-import com.example.mystashapp.mystashappproject.pojo.program_stamps.ProgramsStamps;
-import com.example.mystashapp.mystashappproject.pojo.redeem_coupon.RedeemCoupon;
-import com.example.mystashapp.mystashappproject.pojo.remindme_coupon.RemindMe;
-import com.example.mystashapp.mystashappproject.pojo.remove_stash.RemoveStash;
-import com.example.mystashapp.mystashappproject.pojo.to_save_coupon_pojo.ToSaveCoupon;
-import com.example.mystashapp.mystashappproject.pojo.update_registeration.UpdateRegisteration;
-import com.example.mystashapp.mystashappproject.pojo.upload_loyaltyimage_pojo.UploadLoyaltyImage;
-
 import okhttp3.MultipartBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
