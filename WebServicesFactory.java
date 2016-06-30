@@ -1,5 +1,3 @@
-package com.example.mystashapp.mystashappproject.webservicefactory;
-
 import com.example.mystashapp.mystashappproject.Constant_util;
 
 import retrofit2.Retrofit;
