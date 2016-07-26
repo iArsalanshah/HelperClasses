@@ -1,1 +1,48 @@
+WebService Class:
+    //using a dynamic URL
+    @Streaming
+    @GET
+    Call<ResponseBody> downloadFileWithDynamicUrlAsync(@Url String fileUrl);
+  
+Upload Image Method:
 
+    private void uploadImage(final Bitmap thumbnail) {
+        if (thumbnail != null) {
+            final ProgressDialog dlg = new ProgressDialog(this);
+            dlg.show();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            thumbnail.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+
+            // create RequestBody instance from file
+            RequestBody requestFile =
+                    RequestBody.create(MediaType.parse("multipart/form-data"), byteArrayOutputStream.toByteArray());
+
+            // MultipartBody.Part is used to send also the actual file name
+            MultipartBody.Part body =
+                    MultipartBody.Part.createFormData("uploaded_file", "upload_image", requestFile);
+            Call<UploadLoyaltyImage> call = WebServicesFactory.getInstance().uploadProfileImage(Constant_util.ACTION_UPLOAD_PROFILE_IMAGE, body);
+            call.enqueue(new Callback<UploadLoyaltyImage>() {
+                @Override
+                public void onResponse(Call<UploadLoyaltyImage> call, Response<UploadLoyaltyImage> response) {
+                    UploadLoyaltyImage uploadImage = response.body();
+                    dlg.dismiss();
+                    if (uploadImage.getHeader().getSuccess().equals("1")) {
+                        imgURL = "http://www.mystash.ca/" + uploadImage.getBody().getFiles().getFilepath();
+                        Log.d(TAG, "onResponse: " + "http://www.mystash.ca/" + uploadImage.getBody().getFiles().getFilepath());
+                        imageProfileRegister.setImageBitmap(thumbnail);
+                    } else {
+                        Log.d(Constant_util.LOG_TAG, "Upload Profile Image onResponse: " + uploadImage + uploadImage.getHeader().getMessage());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<UploadLoyaltyImage> call, Throwable t) {
+                    dlg.dismiss();
+                    Log.d(Constant_util.LOG_TAG, "onFailure: " + t.getMessage());
+//                        Toast.makeText(Register.this, "Network Connection Error", Toast.LENGTH_SHORT).show();
+                }
+
+            });
+        }
+
+    }
