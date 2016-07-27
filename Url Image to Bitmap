@@ -1,0 +1,40 @@
+//Picasso
+private Target target = new Target() {
+      @Override
+      public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {       
+      }
+
+      @Override
+      public void onBitmapFailed() {
+      }
+    }
+
+private void someMethod() {
+   Picasso.with(this).load("url").into(target);
+}
+
+@Override public void onDestroy() {  // could be in onPause or onStop
+   Picasso.with(this).cancelRequest(target);
+}
+
+///////////////////////I discovered the method below, and 
+putting that on another thread seamlessly allowed me to do 
+exactly what I was attempting, no Picasso required:
+
+public static Drawable LoadImageFromWebOperations(String url) {
+        try {
+            InputStream is = (InputStream) new URL(url).getContent();
+            Drawable d = Drawable.createFromStream(is, "src name");
+            return d;
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+
+        } catch (MalformedURLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
