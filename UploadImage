@@ -1,8 +1,8 @@
 WebService Class:
-    //using a dynamic URL
-    @Streaming
-    @GET
-    Call<ResponseBody> downloadFileWithDynamicUrlAsync(@Url String fileUrl);
+    @Multipart
+    @POST("/mobileservice_new.php")
+    Call<UploadLoyaltyImage> uploadLoyaltyImage(@Query("action") String upload_loyalty_image,
+                                                @Part MultipartBody.Part file);
   
 Upload Image Method:
 
