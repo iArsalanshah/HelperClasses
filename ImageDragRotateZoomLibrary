@@ -1,0 +1,886 @@
+//// how to implement this on MainActivity.java and xml file
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/canvasView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+</FrameLayout>
+
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        FrameLayout canvas = (FrameLayout) findViewById(R.id.canvasView);
+
+
+
+// add a stickerImage to canvas
+        StickerImageView iv_sticker = new StickerImageView(MainActivity.this);
+        iv_sticker.setImageDrawable(getResources().getDrawable(R.drawable.c10));
+        canvas.addView(iv_sticker);
+
+// add a stickerText to canvas
+        StickerTextView tv_sticker = new StickerTextView(MainActivity.this);
+        tv_sticker.setText("nkDroid");
+        canvas.addView(tv_sticker);
+    }
+}
+//////////////////End of implementation
+
+/////////In Utils<package>
+
+import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.RectF;
+import android.os.Build;
+import android.text.Layout.Alignment;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+import android.util.AttributeSet;
+import android.util.SparseIntArray;
+import android.util.TypedValue;
+import android.widget.TextView;
+
+public class AutoResizeTextView extends TextView {
+    private interface SizeTester {
+        /**
+         *
+         * @param suggestedSize
+         *            Size of text to be tested
+         * @param availableSpace
+         *            available space in which text must fit
+         * @return an integer < 0 if after applying {@code suggestedSize} to
+         *         text, it takes less space than {@code availableSpace}, > 0
+         *         otherwise
+         */
+        public int onTestSize(int suggestedSize, RectF availableSpace);
+    }
+
+    private RectF mTextRect = new RectF();
+
+    private RectF mAvailableSpaceRect;
+
+    private SparseIntArray mTextCachedSizes;
+
+    private TextPaint mPaint;
+
+    private float mMaxTextSize;
+
+    private float mSpacingMult = 1.0f;
+
+    private float mSpacingAdd = 0.0f;
+
+    private float mMinTextSize = 20;
+
+    private int mWidthLimit;
+
+    private static final int NO_LINE_LIMIT = -1;
+    private int mMaxLines;
+
+    private boolean mEnableSizeCache = true;
+    private boolean mInitiallized;
+
+    public AutoResizeTextView(Context context) {
+        super(context);
+        initialize();
+    }
+
+    public AutoResizeTextView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        initialize();
+    }
+
+    public AutoResizeTextView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+        initialize();
+    }
+
+    private void initialize() {
+        mPaint = new TextPaint(getPaint());
+        mMaxTextSize = getTextSize();
+        mAvailableSpaceRect = new RectF();
+        mTextCachedSizes = new SparseIntArray();
+        if (mMaxLines == 0) {
+            // no value was assigned during construction
+            mMaxLines = NO_LINE_LIMIT;
+        }
+        mInitiallized = true;
+    }
+
+    @Override
+    public void setText(final CharSequence text, BufferType type) {
+        super.setText(text, type);
+        adjustTextSize(text.toString());
+    }
+
+    @Override
+    public void setTextSize(float size) {
+        mMaxTextSize = size;
+        mTextCachedSizes.clear();
+        adjustTextSize(getText().toString());
+    }
+
+    @Override
+    public void setMaxLines(int maxlines) {
+        super.setMaxLines(maxlines);
+        mMaxLines = maxlines;
+        reAdjust();
+    }
+
+    public int getMaxLines() {
+        return mMaxLines;
+    }
+
+    @Override
+    public void setSingleLine() {
+        super.setSingleLine();
+        mMaxLines = 1;
+        reAdjust();
+    }
+
+    @Override
+    public void setSingleLine(boolean singleLine) {
+        super.setSingleLine(singleLine);
+        if (singleLine) {
+            mMaxLines = 1;
+        } else {
+            mMaxLines = NO_LINE_LIMIT;
+        }
+        reAdjust();
+    }
+
+    @Override
+    public void setLines(int lines) {
+        super.setLines(lines);
+        mMaxLines = lines;
+        reAdjust();
+    }
+
+    @Override
+    public void setTextSize(int unit, float size) {
+        Context c = getContext();
+        Resources r;
+
+        if (c == null)
+            r = Resources.getSystem();
+        else
+            r = c.getResources();
+        mMaxTextSize = TypedValue.applyDimension(unit, size,
+                r.getDisplayMetrics());
+        mTextCachedSizes.clear();
+        adjustTextSize(getText().toString());
+    }
+
+    @Override
+    public void setLineSpacing(float add, float mult) {
+        super.setLineSpacing(add, mult);
+        mSpacingMult = mult;
+        mSpacingAdd = add;
+    }
+
+    /**
+     * Set the lower text size limit and invalidate the view
+     *
+     * @param minTextSize
+     */
+    public void setMinTextSize(float minTextSize) {
+        mMinTextSize = minTextSize;
+        reAdjust();
+    }
+
+    private void reAdjust() {
+        adjustTextSize(getText().toString());
+    }
+
+    private void adjustTextSize(String string) {
+        if (!mInitiallized) {
+            return;
+        }
+        int startSize = (int) mMinTextSize;
+        int heightLimit = getMeasuredHeight() - getCompoundPaddingBottom()
+                - getCompoundPaddingTop();
+        mWidthLimit = getMeasuredWidth() - getCompoundPaddingLeft()
+                - getCompoundPaddingRight();
+        mAvailableSpaceRect.right = mWidthLimit;
+        mAvailableSpaceRect.bottom = heightLimit;
+        super.setTextSize(
+                TypedValue.COMPLEX_UNIT_PX,
+                efficientTextSizeSearch(startSize, (int) mMaxTextSize,
+                        mSizeTester, mAvailableSpaceRect));
+    }
+
+    private final SizeTester mSizeTester = new SizeTester() {
+        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+        @Override
+        public int onTestSize(int suggestedSize, RectF availableSPace) {
+            mPaint.setTextSize(suggestedSize);
+            String text = getText().toString();
+            boolean singleline = getMaxLines() == 1;
+            if (singleline) {
+                mTextRect.bottom = mPaint.getFontSpacing();
+                mTextRect.right = mPaint.measureText(text);
+            } else {
+                StaticLayout layout = new StaticLayout(text, mPaint,
+                        mWidthLimit, Alignment.ALIGN_NORMAL, mSpacingMult,
+                        mSpacingAdd, true);
+                // return early if we have more lines
+                if (getMaxLines() != NO_LINE_LIMIT
+                        && layout.getLineCount() > getMaxLines()) {
+                    return 1;
+                }
+                mTextRect.bottom = layout.getHeight();
+                int maxWidth = -1;
+                for (int i = 0; i < layout.getLineCount(); i++) {
+                    if (maxWidth < layout.getLineWidth(i)) {
+                        maxWidth = (int) layout.getLineWidth(i);
+                    }
+                }
+                mTextRect.right = maxWidth;
+            }
+
+            mTextRect.offsetTo(0, 0);
+            if (availableSPace.contains(mTextRect)) {
+                // may be too small, don't worry we will find the best match
+                return -1;
+            } else {
+                // too big
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Enables or disables size caching, enabling it will improve performance
+     * where you are animating a value inside TextView. This stores the font
+     * size against getText().length() Be careful though while enabling it as 0
+     * takes more space than 1 on some fonts and so on.
+     *
+     * @param enable
+     *            enable font size caching
+     */
+    public void enableSizeCache(boolean enable) {
+        mEnableSizeCache = enable;
+        mTextCachedSizes.clear();
+        adjustTextSize(getText().toString());
+    }
+
+    private int efficientTextSizeSearch(int start, int end,
+                                        SizeTester sizeTester, RectF availableSpace) {
+        if (!mEnableSizeCache) {
+            return binarySearch(start, end, sizeTester, availableSpace);
+        }
+        String text = getText().toString();
+        int key = text == null ? 0 : text.length();
+        int size = mTextCachedSizes.get(key);
+        if (size != 0) {
+            return size;
+        }
+        size = binarySearch(start, end, sizeTester, availableSpace);
+        mTextCachedSizes.put(key, size);
+        return size;
+    }
+
+    private static int binarySearch(int start, int end, SizeTester sizeTester,
+                                    RectF availableSpace) {
+        int lastBest = start;
+        int lo = start;
+        int hi = end - 1;
+        int mid = 0;
+        while (lo <= hi) {
+            mid = (lo + hi) >>> 1;
+            int midValCmp = sizeTester.onTestSize(mid, availableSpace);
+            if (midValCmp < 0) {
+                lastBest = lo;
+                lo = mid + 1;
+            } else if (midValCmp > 0) {
+                hi = mid - 1;
+                lastBest = hi;
+            } else {
+                return mid;
+            }
+        }
+        // make sure to return last best
+        // this is what should always be returned
+        return lastBest;
+
+    }
+
+    @Override
+    protected void onTextChanged(final CharSequence text, final int start,
+                                 final int before, final int after) {
+        super.onTextChanged(text, start, before, after);
+        reAdjust();
+    }
+
+    @Override
+    protected void onSizeChanged(int width, int height, int oldwidth,
+                                 int oldheight) {
+        mTextCachedSizes.clear();
+        super.onSizeChanged(width, height, oldwidth, oldheight);
+        if (width != oldwidth || height != oldheight) {
+            reAdjust();
+        }
+    }
+}
+
+
+
+
+
+////////////////////////////////// end of Utils......
+
+
+
+
+//////StickerView
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.util.AttributeSet;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+
+import com.hyenoon.uigesturetest.R;
+
+
+public abstract class StickerView extends FrameLayout{
+
+    public static final String TAG = "com.knef.stickerView";
+    private BorderView iv_border;
+    private ImageView iv_scale;
+    private ImageView iv_delete;
+    private ImageView iv_flip;
+
+    // For scalling
+    private float this_orgX = -1, this_orgY = -1;
+    private float scale_orgX = -1, scale_orgY = -1;
+    private double scale_orgWidth = -1, scale_orgHeight = -1;
+    // For rotating
+    private float rotate_orgX = -1, rotate_orgY = -1, rotate_newX = -1, rotate_newY = -1;
+    // For moving
+    private float move_orgX =-1, move_orgY = -1;
+
+    private double centerX, centerY;
+
+    private final static int BUTTON_SIZE_DP = 30;
+    private final static int SELF_SIZE_DP = 100;
+
+
+
+    public StickerView(Context context) {
+        super(context);
+        init(context);
+    }
+
+    public StickerView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init(context);
+    }
+
+    public StickerView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+        init(context);
+    }
+
+    private void init(Context context){
+        this.iv_border = new BorderView(context);
+        this.iv_scale = new ImageView(context);
+        this.iv_delete = new ImageView(context);
+        this.iv_flip = new ImageView(context);
+
+        this.iv_scale.setImageResource(R.drawable.zoominout);
+        this.iv_delete.setImageResource(R.drawable.remove);
+        this.iv_flip.setImageResource(R.drawable.flip);
+
+        this.setTag("DraggableViewGroup");
+        this.iv_border.setTag("iv_border");
+        this.iv_scale.setTag("iv_scale");
+        this.iv_delete.setTag("iv_delete");
+        this.iv_flip.setTag("iv_flip");
+
+        int margin = convertDpToPixel(BUTTON_SIZE_DP, getContext())/2;
+        int size = convertDpToPixel(SELF_SIZE_DP, getContext());
+
+        LayoutParams this_params =
+                new LayoutParams(
+                        size,
+                        size
+                );
+        this_params.gravity = Gravity.CENTER;
+
+        LayoutParams iv_main_params =
+                new LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                );
+        iv_main_params.setMargins(margin,margin,margin,margin);
+
+        LayoutParams iv_border_params =
+                new LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                );
+        iv_border_params.setMargins(margin,margin,margin,margin);
+
+        LayoutParams iv_scale_params =
+                new LayoutParams(
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext()),
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext())
+                );
+        iv_scale_params.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+
+        LayoutParams iv_delete_params =
+                new LayoutParams(
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext()),
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext())
+                );
+        iv_delete_params.gravity = Gravity.TOP | Gravity.RIGHT;
+
+        LayoutParams iv_flip_params =
+                new LayoutParams(
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext()),
+                        convertDpToPixel(BUTTON_SIZE_DP, getContext())
+                );
+        iv_flip_params.gravity = Gravity.TOP | Gravity.LEFT;
+
+        this.setLayoutParams(this_params);
+        this.addView(getMainView(), iv_main_params);
+        this.addView(iv_border, iv_border_params);
+        this.addView(iv_scale, iv_scale_params);
+        this.addView(iv_delete, iv_delete_params);
+        this.addView(iv_flip, iv_flip_params);
+        this.setOnTouchListener(mTouchListener);
+        this.iv_scale.setOnTouchListener(mTouchListener);
+        this.iv_delete.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(StickerView.this.getParent()!=null){
+                    ViewGroup myCanvas = ((ViewGroup)StickerView.this.getParent());
+                    myCanvas.removeView(StickerView.this);
+                }
+            }
+        });
+        this.iv_flip.setOnClickListener(new OnClickListener(){
+
+            @Override
+            public void onClick(View view) {
+                Log.v(TAG, "flip the view");
+
+                View mainView = getMainView();
+                mainView.setRotationY(mainView.getRotationY() == -180f? 0f: -180f);
+                mainView.invalidate();
+                requestLayout();
+            }
+        });
+    }
+
+    public boolean isFlip(){
+        return getMainView().getRotationY() == -180f;
+    }
+
+    protected abstract View getMainView();
+
+    private OnTouchListener mTouchListener = new OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+
+            if(view.getTag().equals("DraggableViewGroup")) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        Log.v(TAG, "sticker view action down");
+                        move_orgX = event.getRawX();
+                        move_orgY = event.getRawY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        Log.v(TAG, "sticker view action move");
+                        float offsetX = event.getRawX() - move_orgX;
+                        float offsetY = event.getRawY() - move_orgY;
+                        StickerView.this.setX(StickerView.this.getX()+offsetX);
+                        StickerView.this.setY(StickerView.this.getY() + offsetY);
+                        move_orgX = event.getRawX();
+                        move_orgY = event.getRawY();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        Log.v(TAG, "sticker view action up");
+                        break;
+                }
+            }else if(view.getTag().equals("iv_scale")){
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        Log.v(TAG, "iv_scale action down");
+
+                        this_orgX = StickerView.this.getX();
+                        this_orgY = StickerView.this.getY();
+
+                        scale_orgX = event.getRawX();
+                        scale_orgY = event.getRawY();
+                        scale_orgWidth = StickerView.this.getLayoutParams().width;
+                        scale_orgHeight = StickerView.this.getLayoutParams().height;
+
+                        rotate_orgX = event.getRawX();
+                        rotate_orgY = event.getRawY();
+
+                        centerX = StickerView.this.getX()+
+                                ((View)StickerView.this.getParent()).getX()+
+                                (float)StickerView.this.getWidth()/2;
+
+
+                        //double statusBarHeight = Math.ceil(25 * getContext().getResources().getDisplayMetrics().density);
+                        int result = 0;
+                        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+                        if (resourceId > 0) {
+                            result = getResources().getDimensionPixelSize(resourceId);
+                        }
+                        double statusBarHeight = result;
+                        centerY = StickerView.this.getY()+
+                                ((View)StickerView.this.getParent()).getY()+
+                                statusBarHeight+
+                                (float)StickerView.this.getHeight()/2;
+
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        Log.v(TAG, "iv_scale action move");
+
+                        rotate_newX = event.getRawX();
+                        rotate_newY = event.getRawY();
+
+                        double angle_diff = Math.abs(
+                                Math.atan2(event.getRawY() - scale_orgY , event.getRawX() - scale_orgX)
+                                        - Math.atan2(scale_orgY - centerY, scale_orgX - centerX))*180/Math.PI;
+
+                        Log.v(TAG, "angle_diff: "+angle_diff);
+
+                        double length1 = getLength(centerX, centerY, scale_orgX, scale_orgY);
+                        double length2 = getLength(centerX, centerY, event.getRawX(), event.getRawY());
+
+                        int size = convertDpToPixel(SELF_SIZE_DP, getContext());
+                        if(length2 > length1
+                                && (angle_diff < 25 || Math.abs(angle_diff-180)<25)
+                                ) {
+                            //scale up
+                            double offsetX = Math.abs(event.getRawX() - scale_orgX);
+                            double offsetY = Math.abs(event.getRawY() - scale_orgY);
+                            double offset = Math.max(offsetX, offsetY);
+                            offset = Math.round(offset);
+                            StickerView.this.getLayoutParams().width += offset;
+                            StickerView.this.getLayoutParams().height += offset;
+                            onScaling(true);
+                            //DraggableViewGroup.this.setX((float) (getX() - offset / 2));
+                            //DraggableViewGroup.this.setY((float) (getY() - offset / 2));
+                        }else if(length2 < length1
+                                && (angle_diff < 25 || Math.abs(angle_diff-180)<25)
+                                && StickerView.this.getLayoutParams().width > size/2
+                                && StickerView.this.getLayoutParams().height > size/2) {
+                            //scale down
+                            double offsetX = Math.abs(event.getRawX() - scale_orgX);
+                            double offsetY = Math.abs(event.getRawY() - scale_orgY);
+                            double offset = Math.max(offsetX, offsetY);
+                            offset = Math.round(offset);
+                            StickerView.this.getLayoutParams().width -= offset;
+                            StickerView.this.getLayoutParams().height -= offset;
+                            onScaling(false);
+                        }
+
+                        //rotate
+
+                        double angle = Math.atan2(event.getRawY() - centerY, event.getRawX() - centerX) * 180 / Math.PI;
+                        Log.v(TAG, "log angle: " + angle);
+
+                        //setRotation((float) angle - 45);
+                        setRotation((float) angle - 45);
+                        Log.v(TAG, "getRotation(): " + getRotation());
+
+                        onRotating();
+
+                        rotate_orgX = rotate_newX;
+                        rotate_orgY = rotate_newY;
+
+                        scale_orgX = event.getRawX();
+                        scale_orgY = event.getRawY();
+
+                        postInvalidate();
+                        requestLayout();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        Log.v(TAG, "iv_scale action up");
+                        break;
+                }
+            }
+            return true;
+        }
+    };
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+    }
+
+    private double getLength(double x1, double y1, double x2, double y2){
+        return Math.sqrt(Math.pow(y2-y1, 2)+Math.pow(x2-x1, 2));
+    }
+
+    private float[] getRelativePos(float absX, float absY){
+        Log.v("ken", "getRelativePos getX:"+((View)this.getParent()).getX());
+        Log.v("ken", "getRelativePos getY:"+((View)this.getParent()).getY());
+        float [] pos = new float[]{
+                absX-((View)this.getParent()).getX(),
+                absY-((View)this.getParent()).getY()
+        };
+        Log.v(TAG, "getRelativePos absY:"+absY);
+        Log.v(TAG, "getRelativePos relativeY:"+pos[1]);
+        return pos;
+    }
+
+    public void setControlItemsHidden(boolean isHidden){
+        if(isHidden) {
+            iv_border.setVisibility(View.INVISIBLE);
+            iv_scale.setVisibility(View.INVISIBLE);
+            iv_delete.setVisibility(View.INVISIBLE);
+            iv_flip.setVisibility(View.INVISIBLE);
+        }else{
+            iv_border.setVisibility(View.VISIBLE);
+            iv_scale.setVisibility(View.VISIBLE);
+            iv_delete.setVisibility(View.VISIBLE);
+            iv_flip.setVisibility(View.VISIBLE);
+        }
+    }
+
+    protected View getImageViewFlip(){
+        return iv_flip;
+    }
+
+    protected void onScaling(boolean scaleUp){}
+
+    protected void onRotating(){}
+
+    private class BorderView extends View{
+
+        public BorderView(Context context) {
+            super(context);
+        }
+
+        public BorderView(Context context, AttributeSet attrs) {
+            super(context, attrs);
+        }
+
+        public BorderView(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            // Draw sticker border
+
+            LayoutParams params = (LayoutParams)this.getLayoutParams();
+
+            Log.v(TAG,"params.leftMargin: "+params.leftMargin);
+
+            Rect border = new Rect();
+            border.left = (int)this.getLeft()-params.leftMargin;
+            border.top = (int)this.getTop()-params.topMargin;
+            border.right = (int)this.getRight()-params.rightMargin;
+            border.bottom = (int)this.getBottom()-params.bottomMargin;
+            Paint borderPaint = new Paint();
+            borderPaint.setStrokeWidth(6);
+            borderPaint.setColor(Color.WHITE);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            canvas.drawRect(border, borderPaint);
+
+        }
+    }
+
+    private static int convertDpToPixel(float dp, Context context){
+        Resources resources = context.getResources();
+        DisplayMetrics metrics = resources.getDisplayMetrics();
+        float px = dp * (metrics.densityDpi / 160f);
+        return (int)px;
+    }
+
+    public void setControlsVisibility(boolean isVisible) {
+        if(!isVisible) {
+            iv_border.setVisibility(View.GONE);
+            iv_delete.setVisibility(View.GONE);
+            iv_flip.setVisibility(View.GONE);
+            iv_scale.setVisibility(View.GONE);
+        }else{
+            iv_border.setVisibility(View.VISIBLE);
+            iv_delete.setVisibility(View.VISIBLE);
+            iv_flip.setVisibility(View.VISIBLE);
+            iv_scale.setVisibility(View.VISIBLE);
+        }
+
+    }
+}
+
+
+/////////////// End of StickerView.....
+
+
+
+///////StickerViewImage 
+
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
+import android.view.View;
+import android.widget.ImageView;
+
+
+public class StickerImageView extends StickerView {
+
+    private String owner_id;
+    private ImageView iv_main;
+    public StickerImageView(Context context) {
+        super(context);
+    }
+
+    public StickerImageView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    public StickerImageView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+    }
+
+    public void setOwnerId(String owner_id){
+        this.owner_id = owner_id;
+    }
+
+    public String getOwnerId(){
+        return this.owner_id;
+    }
+
+    @Override
+    public View getMainView() {
+        if(this.iv_main == null) {
+            this.iv_main = new ImageView(getContext());
+            this.iv_main.setScaleType(ImageView.ScaleType.FIT_XY);
+        }
+        return iv_main;
+    }
+    public void setImageBitmap(Bitmap bmp){
+        this.iv_main.setImageBitmap(bmp);
+    }
+
+    public void setImageResource(int res_id){
+        this.iv_main.setImageResource(res_id);
+    }
+
+    public void setImageDrawable(Drawable drawable){ this.iv_main.setImageDrawable(drawable); }
+
+    public Bitmap getImageBitmap(){ return ((BitmapDrawable)this.iv_main.getDrawable()).getBitmap() ; }
+
+}
+
+
+//////////////////////End of Stickerview Image...........
+
+
+
+
+
+///////StickerView Text......
+
+
+import android.content.Context;
+import android.graphics.Color;
+import android.util.AttributeSet;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+
+import com.knef.stickerview.util.AutoResizeTextView;
+
+/**
+ * Created by cheungchingai on 6/15/15.
+ */
+public class StickerTextView extends StickerView{
+    private AutoResizeTextView tv_main;
+    public StickerTextView(Context context) {
+        super(context);
+    }
+
+    public StickerTextView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    public StickerTextView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+    }
+
+    @Override
+    public View getMainView() {
+        if(tv_main != null)
+            return tv_main;
+
+        tv_main = new AutoResizeTextView(getContext());
+        //tv_main.setTextSize(22);
+        tv_main.setTextColor(Color.WHITE);
+        tv_main.setGravity(Gravity.CENTER);
+        tv_main.setTextSize(400);
+        tv_main.setShadowLayer(4, 0, 0, Color.BLACK);
+        tv_main.setMaxLines(1);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        );
+        params.gravity = Gravity.CENTER;
+        tv_main.setLayoutParams(params);
+        if(getImageViewFlip()!=null)
+            getImageViewFlip().setVisibility(View.GONE);
+        return tv_main;
+    }
+
+    public void setText(String text){
+        if(tv_main!=null)
+            tv_main.setText(text);
+    }
+
+    public String getText(){
+        if(tv_main!=null)
+            return tv_main.getText().toString();
+
+        return null;
+    }
+
+    public static float pixelsToSp(Context context, float px) {
+        float scaledDensity = context.getResources().getDisplayMetrics().scaledDensity;
+        return px/scaledDensity;
+    }
+
+    @Override
+    protected void onScaling(boolean scaleUp) {
+        super.onScaling(scaleUp);
+    }
+}
+
+
+
+///////////////////////End of StickerViewText.............
+
