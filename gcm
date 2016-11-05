@@ -1,9 +1,9 @@
 //Build.gradle (app) file
-    compile 'com.google.android.gms:play-services-gcm:8.4.0'
+    compile 'com.google.android.gms:play-services-gcm:9.4.0'
     apply plugin: 'com.google.gms.google-services'
     
 //Build.gradle(project file)
-  classpath 'com.google.gms:google-services:2.0.0-alpha6'
+  classpath 'com.google.gms:google-services:3.0.0'
 
 //Manifest File
 
