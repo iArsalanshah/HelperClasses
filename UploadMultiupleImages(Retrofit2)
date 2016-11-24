@@ -1,0 +1,34 @@
+//////******************Web Call
+
+    @Multipart
+    @POST("xyz")
+    Call<UploadBills> uploadBills(@Query("action") String action,
+                                  @Query("user_id") String user_id,
+                                  ...
+                                  ...
+                                  ...
+                                  @PartMap Map<String, RequestBody> multiple_Files); //****Should be String Key for Map<> Obj in Retrofit2
+                                                                                     //****also use @PartMap for Map<> object
+
+/////******************* Make Map Object for multiple Images
+
+    private Map<String, RequestBody> getCompressedBitmaps(List<Bitmap> bmArray, String key) {
+        Map<String, RequestBody> map = new HashMap<>();
+
+        for (int i = 0; i < bmArray.size(); i++) {
+            
+            //convert bitmap to byteArray
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            bmArray.get(i).compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
+            
+            //current time in milliSeconds
+            long time= System.currentTimeMillis();
+            
+            // create RequestBody instance from file
+            RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), byteArrayOutputStream.toByteArray());
+            
+            //add requested file in Map object
+            map.put("key[]\"; filename=\"" + time + "_IMG.jpg\"", requestFile);
+        }
+        return map;
+    }
