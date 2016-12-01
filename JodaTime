@@ -1,0 +1,23 @@
+// gradle file
+// compile 'joda-time:joda-time:2.9.6'
+
+
+//Utils Method:
+
+    public static String getDateUsingString(String dateStr) {
+        DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+        DateTime dtOld = formatter.parseDateTime(dateStr);
+        DateTime dtNew = new DateTime();
+
+        String time;
+        /*Today or same date*/
+        if (dtNew.getDayOfYear() == dtOld.getDayOfYear()) {
+            time = "Today at " + dtOld.getHourOfDay() + ":" + dtOld.getMinuteOfHour();
+        }
+        /*More than 1 day past*/
+        else if (dtNew.getDayOfYear() > dtOld.getDayOfYear()) {
+            time = dtOld.monthOfYear().getAsShortText() + " " + dtOld.getDayOfMonth() + " at " + dtOld.getHourOfDay() + ":" + dtOld.getMinuteOfHour();
+        } else {
+            time = "error";
+        }
+       
