@@ -1,0 +1,31 @@
+public <T> void putComplex(String key, T value){
+    Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+    String data = gson.toJson(value);
+    Editor ed = getSettings(context).edit();
+    ed.putString(key, data);
+    ed.commit();
+}
+
+
+public <T> T getComplex(String key, Class<T> type){
+    Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+    String data = getSettings(context).getString(key, null);
+    if (data==null){
+        return null;
+    }
+    return gson.fromJson(data, type);
+}
+
+protected static SharedPreferences getSettings(Context context){
+    SharedPreferences settings = context.getSharedPreferences(AppConfig.APP_ID, Context.MODE_PRIVATE);
+    return settings;
+}   
+
+
+public static Address getAddress(Context context){
+    return getComplex(SP_ADDRESS, Address.class);
+}
+
+public static void setAddress(Context context, Address address){
+    putComplex(SP_ADDRESS, address);
+}   
