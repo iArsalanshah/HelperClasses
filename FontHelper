@@ -1,0 +1,58 @@
+/**
+ * Created by Arsalan on 5/17/2017.
+ */
+
+public class FontHelper {
+    private static String MY_FONT = "fonts/Roboto-Medium.ttf";
+    private static Typeface defaultTypeface;
+
+    /*
+     * Set default typeface on a View, or all Views in a given ViewGroup
+     */
+    public static void setDefaultTypeface(View v) {
+        // load the font and store as a static member
+        if (defaultTypeface == null) {
+            defaultTypeface = Typeface.createFromAsset(v.getContext().getAssets(), MY_FONT);
+        }
+
+        if (v instanceof TextView) {
+            ((TextView) v).setTypeface(defaultTypeface);
+        } else if (v instanceof EditText) {
+            ((EditText) v).setTypeface(defaultTypeface);
+        } else if (v instanceof Button) {
+            ((Button) v).setTypeface(defaultTypeface);
+        } else if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                View child = vg.getChildAt(i);
+                setDefaultTypeface(child);
+            }
+        }
+    }
+
+
+    /*
+     * Set custom typeface on a View, or all Views in a given ViewGroup
+     */
+    public static void setCustomTypeface(View v, String font) {
+        // load the font if empty or null
+        if (Util.isEmptyOrNull(font)) {
+            font = MY_FONT;
+        }
+        Typeface customTypeface = Typeface.createFromAsset(v.getContext().getAssets(), font);
+
+        if (v instanceof TextView) {
+            ((TextView) v).setTypeface(customTypeface);
+        } else if (v instanceof EditText) {
+            ((EditText) v).setTypeface(customTypeface);
+        } else if (v instanceof Button) {
+            ((Button) v).setTypeface(customTypeface);
+        } else if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                View child = vg.getChildAt(i);
+                setCustomTypeface(child, font);
+            }
+        }
+    }
+}
