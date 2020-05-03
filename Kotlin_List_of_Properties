@@ -1,0 +1,20 @@
+reference: https://medium.com/@hayi/kotlin-get-list-of-some-property-values-of-object-from-list-of-object-8da9419c2e77
+
+open class Model() {
+    var id: Int? = null
+    var name: String? = null
+    var category: String? = null
+    var info: String? = null
+    var created: String? = null
+    var updated: String? = null
+}
+
+inline fun <reified T, Y> MutableList<T>.listOfField(property: KMutableProperty1<T, Y?>):MutableList<Y> {
+    val yy = ArrayList<Y>()
+    this.forEach { t: T ->
+        yy.add(property.get(t) as Y)
+    }
+    return yy
+}
+
+val name = users?.listOfField(Model::name)
